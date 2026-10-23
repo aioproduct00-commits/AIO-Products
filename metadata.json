@@ -1,0 +1,6 @@
+{
+  "name": "AIO PRODUCT",
+  "description": "Because Brand Matters. Modern e-commerce shopping platform for Pakistan offering carefully selected quality products with nationwide Cash on Delivery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
