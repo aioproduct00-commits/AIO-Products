@@ -375,6 +375,19 @@ export const INITIAL_ORDERS: Order[] = [
 
 export const INITIAL_MEDIA_ITEMS: MediaItem[] = [
   {
+    id: 'media-song-mile-ho-tum',
+    title: 'Mile Ho Tum - Fever (Tony Kakkar & Neha Kakkar)',
+    description: 'Official romantic song "Mile Ho Tum Humko Bade Naseebon Se" from the movie Fever. High-definition stereo audio track available for listening and direct download.',
+    file_url: '/assets/aistudio/_SongsPK.info__03_-_Fever_-_Mile_Ho_Tum_7c3cc7d1.mp3',
+    file_name: 'Mile_Ho_Tum_Fever.mp3',
+    file_type: 'audio',
+    file_size: '5.3 MB',
+    category: 'Audio & Music',
+    is_public: true,
+    download_count: 1420,
+    created_at: new Date().toISOString(),
+  },
+  {
     id: 'media-1',
     title: 'AIO PRODUCT Official Catalog 2026',
     description: 'Complete digital lookbook with high-resolution photography, wholesale rates, and full specs across all categories.',

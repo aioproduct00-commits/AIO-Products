@@ -185,8 +185,20 @@ export function initLocalStore(): void {
   if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
     setLocalItem(STORAGE_KEYS.SETTINGS, DEFAULT_SITE_SETTINGS);
   }
-  if (!localStorage.getItem(STORAGE_KEYS.MEDIA)) {
+  const currentMedia = getLocalItem<MediaItem[]>(STORAGE_KEYS.MEDIA, []);
+  if (!currentMedia || currentMedia.length === 0) {
     setLocalItem(STORAGE_KEYS.MEDIA, INITIAL_MEDIA_ITEMS);
+  } else {
+    let mediaUpdated = false;
+    for (const initM of INITIAL_MEDIA_ITEMS) {
+      if (!currentMedia.some(m => m.id === initM.id || m.file_name === initM.file_name || m.title === initM.title)) {
+        currentMedia.unshift(initM);
+        mediaUpdated = true;
+      }
+    }
+    if (mediaUpdated) {
+      setLocalItem(STORAGE_KEYS.MEDIA, currentMedia);
+    }
   }
 }
 

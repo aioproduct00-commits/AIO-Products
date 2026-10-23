@@ -265,7 +265,7 @@ export const MediaLibraryView: React.FC = () => {
               }`}
             >
               <Music className="w-3.5 h-3.5" />
-              <span>Audio Guides</span>
+              <span>Audio & Songs</span>
             </button>
             <button
               onClick={() => setSelectedTypeFilter('archive')}
@@ -294,7 +294,11 @@ export const MediaLibraryView: React.FC = () => {
                     className="bg-white rounded-2xl border border-[#E0EAE3] overflow-hidden shadow-xs hover:shadow-md transition-all group flex flex-col justify-between"
                   >
                     {/* Media Thumbnail / Preview Area */}
-                    <div className="relative aspect-video bg-slate-900 overflow-hidden flex items-center justify-center">
+                    <div
+                      onClick={() => setPreviewItem(item)}
+                      className="relative aspect-video bg-slate-900 overflow-hidden flex items-center justify-center cursor-pointer"
+                      title="Click to preview / listen"
+                    >
                       {item.file_type === 'image' ? (
                         <img
                           src={item.file_url}
@@ -315,10 +319,12 @@ export const MediaLibraryView: React.FC = () => {
                           </div>
                         </div>
                       ) : item.file_type === 'audio' ? (
-                        <div className="w-full h-full bg-gradient-to-tr from-amber-900 to-amber-700 flex flex-col items-center justify-center text-white p-4">
-                          <Music className="w-10 h-10 mb-2 opacity-90 animate-pulse" />
-                          <span className="text-[11px] font-mono tracking-widest text-amber-200">
-                            AUDIO TRACK
+                        <div className="w-full h-full bg-gradient-to-tr from-amber-950 via-amber-900 to-amber-700 flex flex-col items-center justify-center text-white p-4 group/audio">
+                          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mb-2 shadow-inner group-hover/audio:scale-110 transition-transform">
+                            <Play className="w-5 h-5 ml-0.5 fill-white text-white" />
+                          </div>
+                          <span className="text-[11px] font-mono tracking-widest text-amber-200 uppercase font-bold">
+                            Listen & Play
                           </span>
                         </div>
                       ) : item.file_type === 'archive' ? (

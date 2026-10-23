@@ -24,6 +24,7 @@ const CATEGORIES = [
   'Brand Assets',
   'User Manuals & Policy',
   'Videos & Demos',
+  'Audio & Music',
   'Audio Guides',
   'General Media',
 ];
