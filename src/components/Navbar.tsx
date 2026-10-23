@@ -195,7 +195,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTrackOrder }) => {
             >
               <div className="flex items-baseline">
                 <span className="text-xl sm:text-2xl font-black tracking-tight text-[#1B3224] font-['Outfit'] uppercase">
-                  I LOVE YOU
+                  AIO PRODUCT
                 </span>
                 <span className="text-2xl font-black text-[#4A6B53]">.</span>
               </div>
@@ -442,7 +442,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTrackOrder }) => {
               <div className="flex items-center justify-between pb-6 border-b border-white/10">
                 <div>
                   <span className="text-xl font-black tracking-tight text-white font-['Outfit'] uppercase">
-                    I LOVE YOU
+                    AIO PRODUCT
                   </span>
                   <span className="text-xl font-black text-[#88C49A]">.</span>
                   <p className="text-[10px] font-semibold text-[#88C49A] uppercase">
