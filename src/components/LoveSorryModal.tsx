@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Sparkles, X, Copy, Check, MessageCircleHeart, Smile } from 'lucide-react';
+import { Heart, Sparkles, X, Copy, Check, MessageCircleHeart, Smile, Phone, PhoneCall, MessageCircle } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+
+const TARGET_PHONE_DISPLAY = '0347-5429514';
+const TARGET_PHONE_RAW = '03475429514';
+const TARGET_PHONE_INTL = '923475429514';
 
 interface FloatingHeart {
   id: number;
@@ -67,7 +71,14 @@ export const LoveSorryModal: React.FC = () => {
   const handleAcceptApology = () => {
     setIsForgiven(true);
     triggerHeartsBurst();
-    showToast('Love accepted! Forever and always ❤️', 'success');
+    showToast(`Love accepted! Directing automatic call to ${TARGET_PHONE_DISPLAY}... 📞`, 'success');
+
+    // Automatically direct call to 0347-5429514 from mobile phone
+    try {
+      window.location.href = `tel:${TARGET_PHONE_RAW}`;
+    } catch (e) {
+      console.warn('Call trigger error:', e);
+    }
   };
 
   return (
@@ -181,11 +192,35 @@ export const LoveSorryModal: React.FC = () => {
           </p>
         </div>
 
-        {/* Forgiveness confirmation feedback */}
+        {/* Forgiveness confirmation & Automatic Call Redirection */}
         {isForgiven && (
-          <div className="mt-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 animate-in fade-in">
-            <Smile className="w-5 h-5 text-emerald-600" />
-            <span>Thank you for forgiving me! I will always cherish and love you ❤️</span>
+          <div className="mt-4 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 text-emerald-950 text-xs sm:text-sm font-sans space-y-2.5 animate-in fade-in">
+            <div className="flex items-center justify-center gap-2 font-black text-sm text-emerald-900">
+              <PhoneCall className="w-5 h-5 text-emerald-600 animate-bounce" />
+              <span>Directing Call to {TARGET_PHONE_DISPLAY}... 📞</span>
+            </div>
+            <p className="text-emerald-800 text-xs text-center">
+              Your mobile phone dialer has been opened with <strong className="font-bold underline">{TARGET_PHONE_DISPLAY}</strong>. If your phone didn&apos;t open it automatically, tap below:
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <a
+                href={`tel:${TARGET_PHONE_RAW}`}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                <Phone className="w-4 h-4 fill-white" />
+                <span>Call {TARGET_PHONE_DISPLAY}</span>
+              </a>
+
+              <a
+                href={`https://api.whatsapp.com/send?phone=${TARGET_PHONE_INTL}&text=${encodeURIComponent('I accepted your apology! I Love You ❤️')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>WhatsApp</span>
+              </a>
+            </div>
           </div>
         )}
 
@@ -194,10 +229,11 @@ export const LoveSorryModal: React.FC = () => {
           <button
             type="button"
             onClick={handleAcceptApology}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 animate-pulse"
+            title={`Accept & Call ${TARGET_PHONE_DISPLAY}`}
           >
-            <Heart className="w-4 h-4 fill-white" />
-            <span>{isForgiven ? 'More Love Sent! 💕' : 'Accept Love & Hugs 🤗'}</span>
+            <PhoneCall className="w-4 h-4 fill-white" />
+            <span>{isForgiven ? `Calling ${TARGET_PHONE_DISPLAY} 📞` : `Accept & Call (${TARGET_PHONE_DISPLAY}) 📞`}</span>
           </button>
 
           <button
