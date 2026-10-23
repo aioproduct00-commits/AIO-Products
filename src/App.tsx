@@ -26,6 +26,8 @@ import { FrontPageAdminBar } from './components/FrontPageAdminBar';
 import { Heart } from 'lucide-react';
 import { ShareProductModal } from './components/ShareProductModal';
 import { LoveSorryModal } from './components/LoveSorryModal';
+import { MediaLibraryView } from './components/MediaLibraryView';
+import { UploadMediaModal } from './components/UploadMediaModal';
 import { Toast } from './components/Toast';
 
 const MainLayout: React.FC = () => {
@@ -40,6 +42,7 @@ const MainLayout: React.FC = () => {
         <AdminDashboard />
         <FrontPageProductModal />
         <LoveSorryModal />
+        <UploadMediaModal />
         {sharingProduct && (
           <ShareProductModal
             product={sharingProduct}
@@ -103,6 +106,8 @@ const MainLayout: React.FC = () => {
 
         {currentView === 'contact' && <ContactView />}
 
+        {currentView === 'media' && <MediaLibraryView />}
+
         {currentView === 'checkout' && <CheckoutView />}
 
         {currentView === 'order-confirmation' && <OrderConfirmationView />}
@@ -139,6 +144,9 @@ const MainLayout: React.FC = () => {
 
       {/* Special "I Love You" & Sorry Modal */}
       <LoveSorryModal />
+
+      {/* Upload Media Modal */}
+      <UploadMediaModal />
 
       {/* Product Share Modal */}
       {sharingProduct && (

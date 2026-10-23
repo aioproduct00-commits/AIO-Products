@@ -119,6 +119,8 @@ export const AdminDashboard: React.FC = () => {
     setCurrentView,
     setIsFrontPageEditMode,
     openFrontPageProductEdit,
+    mediaItems,
+    openUploadMediaModal,
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -814,6 +816,24 @@ export const AdminDashboard: React.FC = () => {
           >
             <Share2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Live Public Link</span>
+          </button>
+
+          <button
+            onClick={() => setCurrentView('media')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+            title="Open Media Library & Downloads"
+          >
+            <Download className="w-3.5 h-3.5 text-sky-300" />
+            <span className="hidden sm:inline">Media Library ({mediaItems.length})</span>
+          </button>
+
+          <button
+            onClick={() => openUploadMediaModal()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+            title="Upload new media, documents, catalogs, videos, or archives"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Add Media</span>
           </button>
 
           <button

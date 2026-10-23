@@ -13,6 +13,7 @@ import {
   Sparkles,
   ArrowLeft,
   Heart,
+  FolderOpen,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { formatPKR } from '../lib/utils';
@@ -124,6 +125,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTrackOrder }) => {
             >
               <Truck className="w-3.5 h-3.5 text-[#A5D9B7] group-hover:scale-110 transition-transform" />
               <span>Track Order</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavClick('media')}
+              className="flex items-center gap-1.5 text-white/90 hover:text-white font-medium text-[11px] sm:text-xs transition-colors cursor-pointer group"
+              title="Media Library & Catalogs"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-[#A5D9B7] group-hover:scale-110 transition-transform" />
+              <span>Media Library</span>
             </button>
 
             <button
@@ -279,6 +290,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTrackOrder }) => {
                 </div>
               )}
             </div>
+
+            <button
+              onClick={() => handleNavClick('media')}
+              className={`transition-colors py-1 relative flex items-center gap-1.5 ${
+                currentView === 'media'
+                  ? 'text-[#1B3224] font-bold'
+                  : 'text-slate-600 hover:text-[#4A6B53]'
+              }`}
+            >
+              <span>Media Library</span>
+              {currentView === 'media' && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#4A6B53] rounded-full" />
+              )}
+            </button>
 
             <button
               onClick={() => handleNavClick('about')}
@@ -488,6 +513,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenTrackOrder }) => {
                   }`}
                 >
                   Categories
+                </button>
+                <button
+                  onClick={() => handleNavClick('media')}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 ${
+                    currentView === 'media'
+                      ? 'bg-white/10 text-white font-bold'
+                      : 'text-slate-300 hover:bg-white/5'
+                  }`}
+                >
+                  <FolderOpen className="w-4 h-4 text-[#88C49A]" />
+                  <span>Media Library</span>
                 </button>
                 <button
                   onClick={() => handleNavClick('about')}

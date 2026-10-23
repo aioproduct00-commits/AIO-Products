@@ -193,3 +193,20 @@ export interface CartItem {
   product: Product;
   quantity: number;
 }
+
+export type MediaFileType = 'image' | 'video' | 'audio' | 'document' | 'archive' | 'other';
+
+export interface MediaItem {
+  id: string;
+  title: string;
+  description?: string;
+  file_url: string;
+  file_name: string;
+  file_type: MediaFileType;
+  file_size?: string;
+  category?: string;
+  is_public: boolean;
+  download_count?: number;
+  created_at: string;
+  updated_at?: string;
+}

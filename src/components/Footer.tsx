@@ -144,6 +144,15 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPolicy, onOpenTrackOrder }
               </li>
               <li>
                 <button
+                  onClick={() => handleNav('media')}
+                  className="hover:text-white transition-colors cursor-pointer text-[#88C49A] font-medium flex items-center gap-1.5"
+                >
+                  <span>Media Library</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full font-bold">New</span>
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={onOpenTrackOrder}
                   className="hover:text-white transition-colors cursor-pointer text-[#88C49A] font-semibold flex items-center gap-1"
                 >

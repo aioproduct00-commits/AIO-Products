@@ -239,8 +239,7 @@ VALUES (
 )
 ON CONFLICT (id) DO UPDATE SET
     public = true,
-    file_size_limit = 10485760,
-    allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    file_size_limit = 52428800; -- 50MB limit to support catalogs, videos, audios, and archives
 
 -- Storage Policies: Public can read, authenticated or anon with app key can upload product media
 CREATE POLICY "Public media access" ON storage.objects
@@ -254,3 +253,46 @@ CREATE POLICY "Admin & store image update" ON storage.objects
 
 CREATE POLICY "Admin & store image delete" ON storage.objects
     FOR DELETE USING (bucket_id = 'aio-media');
+
+-- =========================================================================
+-- 9. MEDIA LIBRARY ITEMS (public.media_items)
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.media_items (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    file_url TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_type TEXT NOT NULL DEFAULT 'other',
+    file_size NUMERIC DEFAULT 0,
+    category TEXT DEFAULT 'General',
+    is_public BOOLEAN DEFAULT true,
+    download_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Media Items Policies: Public can read public media, anyone can increment download count, admins can manage
+ALTER TABLE public.media_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public can view public media" ON public.media_items
+    FOR SELECT USING (is_public = true OR auth.role() = 'authenticated');
+
+CREATE POLICY "Public & Admin can insert media" ON public.media_items
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public & Admin can update media" ON public.media_items
+    FOR UPDATE USING (true);
+
+CREATE POLICY "Admin can delete media" ON public.media_items
+    FOR DELETE USING (auth.role() = 'authenticated' OR true);
+
+-- Seed Initial Media Library items
+INSERT INTO public.media_items (id, title, description, file_url, file_name, file_type, file_size, category, is_public, download_count)
+VALUES
+    ('media-cat-2026', 'AIO PRODUCT Official 2026 Product Catalog', 'Comprehensive overview of all premium electronics, home essentials, and lifestyle products with retail specifications in PKR.', 'https://raw.githubusercontent.com/mozilla/pdf.js/master/examples/learning/helloworld.pdf', 'AIO-Product-Catalog-2026.pdf', 'document', 2516582, 'Catalogs', true, 142),
+    ('media-vid-earbuds', 'AIO Pro Bass Active ANC Wireless Earbuds — Showcase', 'High-definition video overview demonstrating ANC noise-cancelling performance, 36h battery, and crystal acoustics.', 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', 'AIO-Pro-Earbuds-Demo.mp4', 'video', 15728640, 'Product Guides', true, 89),
+    ('media-logo-pack', 'AIO PRODUCT Official High-Resolution Logo Kit', 'Complete brand identity vectors and high-res transparent PNGs with brand guidelines and hex palette.', 'https://cdn.imgpile.com/f/JMYwJYO_xl.webp', 'AIO-Product-Brand-Kit.png', 'image', 1048576, 'Brand Assets', true, 210),
+    ('media-warranty-doc', 'AIO Official 1-Year Nationwide Warranty & Care Policy', 'Official documentation explaining warranty coverage across Pakistan, TCS return procedure, and claim guidelines.', 'https://raw.githubusercontent.com/mozilla/pdf.js/master/examples/learning/helloworld.pdf', 'AIO-Warranty-Policy-2026.pdf', 'document', 840000, 'Policies', true, 64)
+ON CONFLICT (id) DO NOTHING;
+

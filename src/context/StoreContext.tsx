@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   deleteCategoryById,
   deleteCustomerById,
+  deleteMediaItemById,
   deleteOrderById,
   deleteProductById,
   deleteReviewById,
@@ -9,10 +10,12 @@ import {
   getCategories,
   getCurrentCustomer,
   getCustomers,
+  getMediaItems,
   getOrders,
   getProducts,
   getReviews,
   getSiteSettings,
+  incrementMediaDownloadCount,
   isSupabaseConnected,
   loginOrRegisterCustomerWithGoogle,
   saveAdminCredentials,
@@ -23,6 +26,7 @@ import {
   updateOrderStatus,
   upsertCategory,
   upsertCustomer,
+  upsertMediaItem,
   upsertProduct,
 } from '../lib/supabase';
 import {
@@ -30,6 +34,7 @@ import {
   CartItem,
   Category,
   Customer,
+  MediaItem,
   Order,
   OrderStatus,
   Product,
@@ -45,6 +50,7 @@ type ViewType =
   | 'product-details'
   | 'about'
   | 'contact'
+  | 'media'
   | 'checkout'
   | 'order-confirmation'
   | 'track-order'
@@ -86,6 +92,7 @@ interface StoreContextType {
   addPlacedOrder: (order: Order) => void;
   reviews: Review[];
   customers: Customer[];
+  mediaItems: MediaItem[];
   siteSettings: SiteSettings;
   isLoading: boolean;
   isSupabaseLive: boolean;
@@ -160,6 +167,14 @@ interface StoreContextType {
   isLoveSorryModalOpen: boolean;
   setIsLoveSorryModalOpen: (open: boolean) => void;
   openLoveSorryModal: () => void;
+
+  // Media Library
+  saveMedia: (item: Partial<MediaItem> & { title: string; file_url: string }) => Promise<MediaItem>;
+  deleteMedia: (id: string) => Promise<boolean>;
+  downloadMediaFile: (item: MediaItem) => Promise<void>;
+  isUploadMediaModalOpen: boolean;
+  setIsUploadMediaModalOpen: (open: boolean) => void;
+  openUploadMediaModal: () => void;
 
   // Toast notifications
   toast: ToastInfo | null;
@@ -236,6 +251,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [orders, setOrders] = useState<Order[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [isUploadMediaModalOpen, setIsUploadMediaModalOpen] = useState<boolean>(false);
+  const openUploadMediaModal = () => setIsUploadMediaModalOpen(true);
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -374,13 +392,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsLoading(true);
     try {
       setIsSupabaseLive(isSupabaseConnected());
-      const [prods, cats, ords, revs, custs, sets] = await Promise.all([
+      const [prods, cats, ords, revs, custs, sets, medias] = await Promise.all([
         getProducts(),
         getCategories(),
         getOrders(),
         getReviews(false),
         getCustomers(),
         getSiteSettings(),
+        getMediaItems(),
       ]);
 
       setProducts(prods);
@@ -403,6 +422,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setReviews(revs);
       setCustomers(custs);
       setSiteSettings(sets);
+      setMediaItems(medias);
       setAdminCredentials(getAdminCredentials());
     } catch (e) {
       console.error('Error loading data:', e);
@@ -652,6 +672,82 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return ok;
   };
 
+  const saveMedia = async (item: Partial<MediaItem> & { title: string; file_url: string }) => {
+    const saved = await upsertMediaItem(item);
+    setMediaItems(prev => {
+      const idx = prev.findIndex(m => m.id === saved.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = saved;
+        return copy;
+      }
+      return [saved, ...prev];
+    });
+    showToast(`Media "${saved.title}" saved successfully!`, 'success');
+    return saved;
+  };
+
+  const deleteMedia = async (id: string) => {
+    const ok = await deleteMediaItemById(id);
+    if (ok) {
+      setMediaItems(prev => prev.filter(m => m.id !== id));
+      showToast('Media file deleted.', 'info');
+    }
+    return ok;
+  };
+
+  const downloadMediaFile = async (item: MediaItem) => {
+    try {
+      incrementMediaDownloadCount(item.id);
+      setMediaItems(prev =>
+        prev.map(m => (m.id === item.id ? { ...m, download_count: (m.download_count || 0) + 1 } : m))
+      );
+
+      // Trigger file download
+      if (item.file_url.startsWith('data:')) {
+        const a = document.createElement('a');
+        a.href = item.file_url;
+        a.download = item.file_name || 'download';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showToast(`Downloading ${item.title}...`, 'success');
+        return;
+      }
+
+      try {
+        const res = await fetch(item.file_url, { mode: 'cors' });
+        if (res.ok) {
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = item.file_name || 'download';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+          showToast(`Downloaded ${item.title}`, 'success');
+          return;
+        }
+      } catch {
+        // Direct anchor fallback
+      }
+
+      const a = document.createElement('a');
+      a.href = item.file_url;
+      a.download = item.file_name || 'download';
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast(`Downloading ${item.title}...`, 'info');
+    } catch {
+      showToast('Download initiated', 'info');
+    }
+  };
+
   return (
     <StoreContext.Provider
       value={{
@@ -670,6 +766,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addPlacedOrder,
         reviews,
         customers,
+        mediaItems,
         siteSettings,
         isLoading,
         isSupabaseLive,
@@ -740,6 +837,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleReviewApproval,
         deleteReview,
         updateSiteContent,
+        saveMedia,
+        deleteMedia,
+        downloadMediaFile,
+        isUploadMediaModalOpen,
+        setIsUploadMediaModalOpen,
+        openUploadMediaModal,
       }}
     >
       {children}

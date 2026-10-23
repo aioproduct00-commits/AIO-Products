@@ -3,6 +3,7 @@ import {
   AdminCredentials,
   Category,
   Customer,
+  MediaItem,
   NewsletterSubscriber,
   Order,
   OrderItem,
@@ -14,6 +15,7 @@ import {
 import {
   DEFAULT_SITE_SETTINGS,
   INITIAL_CATEGORIES,
+  INITIAL_MEDIA_ITEMS,
   INITIAL_ORDERS,
   INITIAL_PRODUCTS,
   INITIAL_REVIEWS,
@@ -30,6 +32,7 @@ const STORAGE_KEYS = {
   SETTINGS: 'aio_site_settings_v2',
   ADMIN_CREDS: 'aio_admin_credentials_v2',
   CURRENT_CUSTOMER: 'aio_current_customer_v2',
+  MEDIA: 'aio_media_items_v2',
   SUPABASE_URL: 'aio_supabase_url',
   SUPABASE_KEY: 'aio_supabase_key',
 };
@@ -182,6 +185,9 @@ export function initLocalStore(): void {
   if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
     setLocalItem(STORAGE_KEYS.SETTINGS, DEFAULT_SITE_SETTINGS);
   }
+  if (!localStorage.getItem(STORAGE_KEYS.MEDIA)) {
+    setLocalItem(STORAGE_KEYS.MEDIA, INITIAL_MEDIA_ITEMS);
+  }
 }
 
 // Reset data to defaults
@@ -190,6 +196,7 @@ export function resetLocalStoreToDefaults(): void {
   setLocalItem(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES);
   setLocalItem(STORAGE_KEYS.REVIEWS, INITIAL_REVIEWS);
   setLocalItem(STORAGE_KEYS.SETTINGS, DEFAULT_SITE_SETTINGS);
+  setLocalItem(STORAGE_KEYS.MEDIA, INITIAL_MEDIA_ITEMS);
   setLocalItem(STORAGE_KEYS.ORDERS, []);
   setLocalItem(STORAGE_KEYS.CUSTOMERS, []);
 }
@@ -1075,3 +1082,238 @@ export async function uploadImageToSupabaseStorage(
     };
   }
 }
+
+// Helper to format file sizes
+export function formatBytes(bytes: number, decimals = 1): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+// Detect media category from mime/extension
+export function detectMediaCategory(fileName: string, mimeType = ''): 'image' | 'video' | 'audio' | 'document' | 'archive' | 'other' {
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+  const mime = mimeType.toLowerCase();
+
+  if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'bmp', 'ico'].includes(ext)) {
+    return 'image';
+  }
+  if (mime.startsWith('video/') || ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v'].includes(ext)) {
+    return 'video';
+  }
+  if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext)) {
+    return 'audio';
+  }
+  if (mime.includes('pdf') || ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv'].includes(ext)) {
+    return 'document';
+  }
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+    return 'archive';
+  }
+  return 'other';
+}
+
+/**
+ * Uploads any media file (image, video, document, audio, archive) to Supabase Storage.
+ * Generates public CDN link and returns metadata.
+ */
+export async function uploadMediaFileToStorage(
+  file: File,
+  folder = 'media'
+): Promise<{ url: string; fileName: string; fileSize: string; fileType: 'image' | 'video' | 'audio' | 'document' | 'archive' | 'other'; success: boolean; error?: string }> {
+  const supabase = getSupabaseClient();
+  const fileType = detectMediaCategory(file.name, file.type);
+  const fileSize = formatBytes(file.size);
+  const timestamp = Date.now();
+  const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const filePath = `${folder}/${timestamp}-${cleanName}`;
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.storage
+        .from(STORAGE_BUCKET_NAME)
+        .upload(filePath, file, {
+          contentType: file.type || 'application/octet-stream',
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (!error && data?.path) {
+        const { data: publicUrlData } = supabase.storage
+          .from(STORAGE_BUCKET_NAME)
+          .getPublicUrl(data.path);
+
+        if (publicUrlData?.publicUrl) {
+          return {
+            url: publicUrlData.publicUrl,
+            fileName: file.name,
+            fileSize,
+            fileType,
+            success: true,
+          };
+        }
+      } else if (error) {
+        console.warn('Supabase storage upload error:', error.message);
+      }
+    } catch (e: any) {
+      console.warn('Storage upload exception:', e);
+    }
+  }
+
+  // Local fallback: convert small files to data URL or object URL
+  return new Promise(resolve => {
+    if (file.size > 8 * 1024 * 1024) {
+      // Large file: create object URL for local session
+      const objectUrl = URL.createObjectURL(file);
+      resolve({
+        url: objectUrl,
+        fileName: file.name,
+        fileSize,
+        fileType,
+        success: true,
+      });
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          url: reader.result as string,
+          fileName: file.name,
+          fileSize,
+          fileType,
+          success: true,
+        });
+      };
+      reader.onerror = () => {
+        resolve({
+          url: URL.createObjectURL(file),
+          fileName: file.name,
+          fileSize,
+          fileType,
+          success: true,
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+// --- MEDIA ITEMS REPOSITORY ---
+export async function getMediaItems(): Promise<MediaItem[]> {
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('media_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data as MediaItem[];
+      }
+    } catch (e) {
+      console.warn('Supabase media_items query error:', e);
+    }
+  }
+
+  initLocalStore();
+  return getLocalItem<MediaItem[]>(STORAGE_KEYS.MEDIA, INITIAL_MEDIA_ITEMS);
+}
+
+export async function upsertMediaItem(item: Partial<MediaItem> & { title: string; file_url: string }): Promise<MediaItem> {
+  const supabase = getSupabaseClient();
+  const now = new Date().toISOString();
+  const fileName = item.file_name || item.title.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const fileType = item.file_type || detectMediaCategory(fileName);
+
+  const newMedia: MediaItem = {
+    id: item.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'media-' + Date.now()),
+    title: item.title,
+    description: item.description || '',
+    file_url: item.file_url,
+    file_name: fileName,
+    file_type: fileType,
+    file_size: item.file_size || 'Unknown',
+    category: item.category || 'General Media',
+    is_public: item.is_public ?? true,
+    download_count: item.download_count ?? 0,
+    created_at: item.created_at || now,
+    updated_at: now,
+  };
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('media_items')
+        .upsert(newMedia)
+        .select()
+        .single();
+
+      if (!error && data) {
+        const list = getLocalItem<MediaItem[]>(STORAGE_KEYS.MEDIA, INITIAL_MEDIA_ITEMS);
+        const idx = list.findIndex(m => m.id === newMedia.id);
+        if (idx >= 0) list[idx] = data as MediaItem;
+        else list.unshift(data as MediaItem);
+        setLocalItem(STORAGE_KEYS.MEDIA, list);
+        return data as MediaItem;
+      }
+    } catch (e) {
+      console.warn('Supabase upsert media_item error:', e);
+    }
+  }
+
+  // Local fallback
+  const list = getLocalItem<MediaItem[]>(STORAGE_KEYS.MEDIA, INITIAL_MEDIA_ITEMS);
+  const idx = list.findIndex(m => m.id === newMedia.id);
+  if (idx >= 0) {
+    list[idx] = newMedia;
+  } else {
+    list.unshift(newMedia);
+  }
+  setLocalItem(STORAGE_KEYS.MEDIA, list);
+  return newMedia;
+}
+
+export async function deleteMediaItemById(id: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('media_items').delete().eq('id', id);
+      if (!error) {
+        const list = getLocalItem<MediaItem[]>(STORAGE_KEYS.MEDIA, INITIAL_MEDIA_ITEMS);
+        setLocalItem(STORAGE_KEYS.MEDIA, list.filter(m => m.id !== id));
+        return true;
+      }
+    } catch (e) {
+      console.warn('Supabase delete media_item error:', e);
+    }
+  }
+
+  const list = getLocalItem<MediaItem[]>(STORAGE_KEYS.MEDIA, INITIAL_MEDIA_ITEMS);
+  setLocalItem(STORAGE_KEYS.MEDIA, list.filter(m => m.id !== id));
+  return true;
+}
+
+export async function incrementMediaDownloadCount(id: string): Promise<void> {
+  const list = getLocalItem<MediaItem[]>(STORAGE_KEYS.MEDIA, INITIAL_MEDIA_ITEMS);
+  const item = list.find(m => m.id === id);
+  if (item) {
+    item.download_count = (item.download_count || 0) + 1;
+    setLocalItem(STORAGE_KEYS.MEDIA, list);
+  }
+
+  const supabase = getSupabaseClient();
+  if (supabase && item) {
+    try {
+      await supabase.from('media_items').update({
+        download_count: item.download_count,
+        updated_at: new Date().toISOString(),
+      }).eq('id', id);
+    } catch (e) {
+      console.warn('Could not increment download count on Supabase:', e);
+    }
+  }
+}
+
